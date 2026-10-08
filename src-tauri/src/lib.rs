@@ -1,3 +1,5 @@
+pub mod device;
+pub mod hid;
 pub mod lighting;
 pub mod protocol;
 

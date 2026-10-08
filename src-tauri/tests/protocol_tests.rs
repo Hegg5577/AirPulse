@@ -1,6 +1,7 @@
 use keyphore_lib::lighting::{Air75MainState, merge_main_preserving_side};
 use keyphore_lib::protocol::{
-    NuPhyRequest, NuPhySessionKey, ProtocolError, validate_response, validate_session_response,
+    NuPhyRequest, NuPhySessionKey, ProtocolError, build_session_request, validate_response,
+    validate_session_response,
 };
 
 fn checksum(report: &[u8; 64]) -> u8 {
@@ -50,6 +51,15 @@ fn temporary_session_response_must_echo_the_challenge_with_one_key() {
         validate_session_response(&response, &challenge).unwrap_err(),
         ProtocolError::SessionMismatch
     );
+}
+
+#[test]
+fn temporary_session_request_contains_the_plain_challenge() {
+    let challenge = std::array::from_fn::<_, 56, _>(|index| index as u8);
+    let report = build_session_request(&challenge);
+    assert_eq!(report[0..2], [0x55, 0xee]);
+    assert_eq!(report[8..], challenge);
+    assert_eq!(report[3], checksum(&report));
 }
 
 #[test]

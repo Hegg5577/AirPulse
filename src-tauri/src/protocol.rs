@@ -88,6 +88,16 @@ fn checksum(report: &[u8; REPORT_LEN]) -> u8 {
         .fold(0, |sum, byte| sum.wrapping_add(*byte))
 }
 
+/// 构造不会改变设备状态的临时会话握手请求。
+pub fn build_session_request(challenge: &[u8; PAYLOAD_LEN]) -> [u8; REPORT_LEN] {
+    let mut report = [0_u8; REPORT_LEN];
+    report[0] = 0x55;
+    report[1] = 0xee;
+    report[8..].copy_from_slice(challenge);
+    report[3] = checksum(&report);
+    report
+}
+
 fn validate_envelope(response: &[u8; REPORT_LEN], command: u8) -> Result<(), ProtocolError> {
     if response[0] != 0xaa {
         return Err(ProtocolError::InvalidDirection);
