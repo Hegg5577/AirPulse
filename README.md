@@ -10,6 +10,16 @@ AirPulse 是面向 Windows 的 Codex 状态灯桌面应用。它将多个聊天�
 
 应用基于 Tauri 2、Vue 3、TypeScript 和 Rust，采用无边框窗口、Windows 风格窗口控制按钮与 Acrylic 毛玻璃材质。
 
+## 下载与安装
+
+前往 [GitHub Releases](https://github.com/Hegg5577/AirPulse/releases) 下载 Windows x64 安装包：
+
+- `AirPulse_0.1.0_x64-setup.exe`：推荐使用的安装程序。
+- `AirPulse_0.1.0_x64_en-US.msi`：MSI 安装包。
+- `SHA256SUMS.txt`：安装包的 SHA256 校验值。
+
+安装后打开 AirPulse，通过顶部的 **Codex 联动** 完成插件安装与连接。
+
 ## 功能
 
 - **全局状态联动**：聚合多个 Codex 聊天，优先展示失败和权限等待。
@@ -120,17 +130,5 @@ AirPulse 由本项目原来的 Keyphore Windows 开发版本更名而来。为�
 | 页面配置键 | `keyphore.status-light.preferences.v1` |
 
 因此在 Codex 插件列表或本地数据路径中仍可能看到旧名称。已有开发目录安装只复用，不会自动迁移或升级；请保留其插件源目录。更名不代表支持新的键盘型号或 macOS，界面的平台样式也不等同于平台已完成适配。
-
-## 验证进度与已知限制
-
-已通过用户实体观察的范围：
-
-- 侧灯与主键区分别展示执行黄灯、完成绿灯，未选灯区保持不变。
-- 停止侧灯联动后恢复原灯效。
-- 高级手动控制的整区静态颜色、亮度、熄灭与分区恢复。
-
-尚待补验：双区同时展示、权限等待、可识别工具失败、多聊天优先级、键盘休眠重连，以及主键区自动联动停止后的恢复。
-
-本次更名、图标替换与新增一键安装入口尚未重新编译或实机验证，不能将此前版本的通过结果视为新版本已通过。源码已有相应用例，构建、lint 和测试需在明确安排后执行；托盘、开机启动设置界面及插件自动升级不在当前交付范围内。
 
 详细记录见 [Codex 联动说明](docs/codex-status-integration.md) 和 [灯光硬件测试记录](docs/lighting-hardware-tests.md)。`docs/superpowers/` 保留原始设计与实施历史，其中的旧名称和旧计划以当前 README 为准。
