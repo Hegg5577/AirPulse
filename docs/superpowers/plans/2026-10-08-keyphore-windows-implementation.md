@@ -10,6 +10,10 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-08-keyphore-windows-design.md`
 
+**2026-10-14 实施更新：** 本计划保留原始阶段划分，不代表所有步骤已执行。主键区亮度地址 1 的旧限制已由实机结果纠正；Hook 改用 `.codex-plugin/plugin.json` 和 10 类官方事件。Task 5 源码与用例已编写，Task 6 已完成启停、串行同步和恢复源码接线，新增部分尚未编译或运行验收。当前行为及已知边界以 [Codex 联动说明](../../codex-status-integration.md) 为准，不执行本计划中的自动提交或全局安装步骤。
+
+**当前范围修订：** 用户要求五种全局状态（失败、权限等待、执行、全部完成、空闲），四种颜色分别自定义，侧灯 / 主键区 / 两者可选；空闲与停止恢复原灯效。页面采用无边框毛玻璃窗口和平台风格控制按钮。下文的仅主键区、旧配色与完成熄灭要求保留为历史计划，不用于覆盖当前需求；分区保护改为每次只写目标分区并校验另一分区不变。
+
 ## Global Constraints
 
 - 支持 Windows 10/11 x64，不申请管理员权限，不安装驱动或 Windows Service。
@@ -203,14 +207,14 @@
 - Create: `src-tauri/src/bin/keyphore-hook.rs`
 - Create: `src-tauri/tests/status_tests.rs`
 - Create: `src-tauri/tests/hook_tests.rs`
-- Create: `plugin/plugin.json`
+- Create: `plugin/.codex-plugin/plugin.json`
 - Create: `plugin/hooks/hooks.json`
 
 **Interfaces:**
 - Consumes: `%LOCALAPPDATA%\Keyphore`。
-- Produces: `handle_hook(input: &[u8], store: &StatusStore) -> Result<()>`、`StatusCore::aggregate_at`、八个 Hook 对 `keyphore-hook.exe` 的调用定义。
+- Produces: `handle_hook(input: &[u8], store: &StatusStore) -> Result<()>`、`StatusCore::aggregate_at`、十类 Hook 对 `keyphore-hook.exe` 的调用定义。
 
-- [ ] **Step 1: 写状态和 Hook 失败测试**
+- [x] **Step 1: 写状态和 Hook 失败测试**
 
   覆盖八类事件、1 MiB 输入上限、状态优先级、并发写入、100 ms 锁超时、完成状态到期、损坏 JSON 备份恢复，以及不持久化内容字段。
 
@@ -219,7 +223,7 @@
   Run: `cargo test --manifest-path src-tauri/Cargo.toml --test status_tests --test hook_tests`
   Expected: 因状态接口尚不存在而编译失败。
 
-- [ ] **Step 3: 实现原子状态存储、聚合器、Hook 二进制和 Plugin 文件**
+- [x] **Step 3: 实现原子状态存储、聚合器、Hook 二进制和 Plugin 文件**
 
   Hook 快速失败时返回非零退出码；日志只记录事件类型和匿名状态标识。
 

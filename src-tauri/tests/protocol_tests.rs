@@ -1,13 +1,24 @@
-use keyphore_lib::lighting::{Air75MainState, merge_main_preserving_side};
-use keyphore_lib::protocol::{
-    NuPhyRequest, NuPhySessionKey, ProtocolError, build_session_request, validate_response,
-    validate_session_response,
+use airpulse_lib::lighting::{Air75MainState, merge_main_preserving_side};
+use airpulse_lib::protocol::{
+    NuPhyRequest, NuPhySessionKey, ProtocolError, build_session_request, decode_led_count,
+    validate_response, validate_session_response,
 };
 
 fn checksum(report: &[u8; 64]) -> u8 {
     report[4..]
         .iter()
         .fold(0, |sum, byte| sum.wrapping_add(*byte))
+}
+
+#[test]
+/// 当前模式读取使用基础信息 A0，而不是从颜色变化推测模式。
+fn base_info_requests_eight_bytes_from_handle_zero() {
+    let key = NuPhySessionKey::new(0x5a);
+    let report = NuPhyRequest::base_info().encode(key);
+    assert_eq!(report[0..2], [0x55, 0xa0]);
+    assert_eq!(report[4..8], [8 ^ key.value(), key.value(), key.value(), key.value()]);
+    assert_eq!(report[3], checksum(&report));
+    assert_eq!(report[8..], [0; 56]);
 }
 
 #[test]
@@ -19,6 +30,49 @@ fn write_request_encodes_the_verified_64_byte_wire_format() {
     assert_eq!(report[4..8], [0x59, 0x5a, 0x5a, 0x5a]);
     assert_eq!(report[8..11], [0x59, 0x44, 0x59]);
     assert_eq!(report[3], checksum(&report));
+}
+
+#[test]
+fn windows_mode_handle_is_encrypted_in_the_request() {
+    let key = NuPhySessionKey::new(0x5a);
+    let request = NuPhyRequest::write_for_handle(0, &[1, 2, 3], 1).unwrap();
+    let report = request.encode(key);
+    assert_eq!(report[7], 1 ^ key.value());
+}
+
+#[test]
+fn response_validation_accepts_the_matching_windows_mode_handle() {
+    let key = NuPhySessionKey::new(0x5a);
+    let request = NuPhyRequest::read_for_handle(0, 1, 1).unwrap();
+    let mut response = [0_u8; 64];
+    response[0] = 0xaa;
+    response[1] = 0xd5;
+    response[4] = 1 ^ key.value();
+    response[5] = key.value();
+    response[6] = key.value();
+    response[7] = 1 ^ key.value();
+    response[8] = 0x42 ^ key.value();
+    response[3] = checksum(&response);
+    assert_eq!(validate_response(&response, &request, key).unwrap(), [0x42]);
+}
+
+#[test]
+fn air75_custom_lighting_commands_use_the_verified_codes() {
+    let key = NuPhySessionKey::new(0x5a);
+    assert_eq!(NuPhyRequest::firmware_info().encode(key)[1], 0xa1);
+    assert_eq!(NuPhyRequest::led_count().encode(key)[1], 0xd1);
+    let colors = NuPhyRequest::write_colors(&[0, 255, 0, 0]).unwrap().encode(key);
+    assert_eq!(colors[1], 0xd8);
+    assert_eq!(colors[4] ^ key.value(), 4);
+    assert_eq!(NuPhyRequest::read_colors(0, 4, 0).unwrap().encode(key)[1], 0xd2);
+}
+
+#[test]
+fn led_count_accepts_the_air75_unencrypted_zero_high_byte() {
+    assert_eq!(
+        decode_led_count([0x68, 0xef], NuPhySessionKey::new(0xef)),
+        104
+    );
 }
 
 #[test]
@@ -103,10 +157,11 @@ fn response_validation_rejects_wrong_address_length_and_session() {
 }
 
 #[test]
+/// 固定颜色保留完整 RGB 和独立亮度，合并时不覆盖侧灯。
 fn air75_main_state_replaces_only_the_first_nine_bytes() {
     let existing = [9, 8, 7, 6, 5, 4, 3, 2, 1, 11, 12, 13, 14, 15, 16, 17, 18];
     let merged =
         merge_main_preserving_side(&existing, &Air75MainState::steady(30, 0, 255, 0).unwrap());
-    assert_eq!(&merged[..9], &[3, 30, 3, 0, 1, 0, 0, 255, 0]);
+    assert_eq!(&merged[..9], &[3, 30, 3, 0, 0, 0, 0, 255, 0]);
     assert_eq!(&merged[9..], &existing[9..]);
 }

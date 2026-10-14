@@ -1,20 +1,25 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Keyphore",
+  "productName": "AirPulse",
   "version": "0.1.0",
   "identifier": "com.barrywu.keyphore.windows",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-desktop.ps1",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
-        "title": "Keyphore",
-        "width": 800,
-        "height": 600
+        "title": "AirPulse",
+        "width": 1080,
+        "height": 760,
+        "minWidth": 880,
+        "minHeight": 640,
+        "decorations": false,
+        "transparent": true,
+        "shadow": true
       }
     ],
     "security": {
@@ -24,6 +29,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": {
+      "../plugin/": "codex-integration/plugin/",
+      "../.agents/plugins/marketplace.json": "codex-integration/.agents/plugins/marketplace.json"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

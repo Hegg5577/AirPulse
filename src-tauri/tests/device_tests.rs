@@ -1,4 +1,4 @@
-use keyphore_lib::device::{Bus, DeviceDescriptor, DeviceSelectionError, select_control_interface};
+use airpulse_lib::device::{Bus, DeviceDescriptor, DeviceSelectionError, select_control_interface};
 
 fn air75() -> DeviceDescriptor {
     DeviceDescriptor {

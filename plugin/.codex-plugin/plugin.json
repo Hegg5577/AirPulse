@@ -1,0 +1,6 @@
+{
+  "name": "keyphore-windows",
+  "version": "0.1.0",
+  "description": "AirPulse 的 Codex 状态联动插件；接收器不访问键盘、不读取聊天正文。仅支持 Windows。",
+  "hooks": "./hooks/hooks.json"
+}

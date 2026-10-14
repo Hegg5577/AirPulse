@@ -17,14 +17,20 @@ impl NuPhySessionKey {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Command {
+    BaseInfo = 0xa0,
+    FirmwareInfo = 0xa1,
+    LedCount = 0xd1,
+    KeyLightColors = 0xd2,
     Read = 0xd5,
     Write = 0xd6,
+    WriteColors = 0xd8,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NuPhyRequest {
     command: Command,
     address: u16,
+    handle: u8,
     response_len: u8,
     payload: Vec<u8>,
 }
@@ -41,26 +47,107 @@ pub enum ProtocolError {
 }
 
 impl NuPhyRequest {
+    /// 读取基础信息，首字节用于确定当前 Mac 或 Windows 模式。
+    pub fn base_info() -> Self {
+        Self {
+            command: Command::BaseInfo,
+            address: 0,
+            handle: 0,
+            response_len: 8,
+            payload: Vec::new(),
+        }
+    }
+
+    /// 创建固件信息读取请求。
+    pub fn firmware_info() -> Self {
+        Self {
+            command: Command::FirmwareInfo,
+            address: 0,
+            handle: 0,
+            response_len: 8,
+            payload: Vec::new(),
+        }
+    }
+
+    /// 创建渲染 LED 数量读取请求。
+    pub fn led_count() -> Self {
+        Self {
+            command: Command::LedCount,
+            address: 0,
+            handle: 0,
+            response_len: 2,
+            payload: Vec::new(),
+        }
+    }
+
+    /// 创建灯珠颜色表读取请求。
+    pub fn read_colors(address: u16, len: u8, handle: u8) -> Result<Self, ProtocolError> {
+        if usize::from(len) > PAYLOAD_LEN {
+            return Err(ProtocolError::PayloadTooLarge);
+        }
+        Ok(Self {
+            command: Command::KeyLightColors,
+            address,
+            handle,
+            response_len: len,
+            payload: Vec::new(),
+        })
+    }
+
+    /// 创建 RAM RGB 表写入请求。
+    pub fn write_colors(payload: &[u8]) -> Result<Self, ProtocolError> {
+        if payload.len() > PAYLOAD_LEN {
+            return Err(ProtocolError::PayloadTooLarge);
+        }
+        Ok(Self {
+            command: Command::WriteColors,
+            address: 0,
+            handle: 0,
+            response_len: payload.len() as u8,
+            payload: payload.to_vec(),
+        })
+    }
+
     /// 创建写请求。
     pub fn write(address: u16, payload: &[u8]) -> Result<Self, ProtocolError> {
+        Self::write_for_handle(address, payload, 0)
+    }
+
+    /// 创建带键盘模式 handle 的写请求。
+    pub fn write_for_handle(
+        address: u16,
+        payload: &[u8],
+        handle: u8,
+    ) -> Result<Self, ProtocolError> {
         if payload.len() > PAYLOAD_LEN {
             return Err(ProtocolError::PayloadTooLarge);
         }
         Ok(Self {
             command: Command::Write,
             address,
+            handle,
             response_len: payload.len() as u8,
             payload: payload.to_vec(),
         })
     }
     /// 创建读请求。
     pub fn read(address: u16, len: u8) -> Result<Self, ProtocolError> {
+        Self::read_for_handle(address, len, 0)
+    }
+
+    /// 创建带键盘模式 handle 的读请求。
+    pub fn read_for_handle(
+        address: u16,
+        len: u8,
+        handle: u8,
+    ) -> Result<Self, ProtocolError> {
         if usize::from(len) > PAYLOAD_LEN {
             return Err(ProtocolError::PayloadTooLarge);
         }
         Ok(Self {
             command: Command::Read,
             address,
+            handle,
             response_len: len,
             payload: Vec::new(),
         })
@@ -73,7 +160,7 @@ impl NuPhyRequest {
         out[4] = self.response_len ^ key.0;
         out[5] = self.address as u8 ^ key.0;
         out[6] = (self.address >> 8) as u8 ^ key.0;
-        out[7] = key.0;
+        out[7] = self.handle ^ key.0;
         for (target, source) in out[8..].iter_mut().zip(&self.payload) {
             *target = *source ^ key.0;
         }
@@ -144,11 +231,19 @@ pub fn validate_response(
     if address != request.address {
         return Err(ProtocolError::ResponseAddressMismatch);
     }
-    if response[7] ^ key.0 != 0 {
+    if response[7] ^ key.0 != request.handle {
         return Err(ProtocolError::SessionMismatch);
     }
     Ok(response[8..8 + usize::from(len)]
         .iter()
         .map(|byte| *byte ^ key.0)
         .collect())
+}
+
+/// 解码 Air75 V3 的 LED 数量；固件会让零值高字节保持未加密。
+pub fn decode_led_count(mut bytes: [u8; 2], key: NuPhySessionKey) -> u16 {
+    if bytes[1] == key.value() {
+        bytes[1] = 0;
+    }
+    u16::from_le_bytes(bytes)
 }
