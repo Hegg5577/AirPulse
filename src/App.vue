@@ -101,6 +101,9 @@ const maximized = ref(false);
 const previewStatus = ref<TaskStatus>("running");
 const manualDialog = ref<HTMLDialogElement | null>(null);
 const integrationDialog = ref<HTMLDialogElement | null>(null);
+const closeDialog = ref<HTMLDialogElement | null>(null);
+const closingWindow = ref(false);
+const closeWindowError = ref("");
 const integration = ref<IntegrationStatus | null>(null);
 const codexEvent = ref<CodexEventStatus | null>(null);
 const checkingIntegration = ref(false);
@@ -110,6 +113,7 @@ const eventError = ref("");
 let statusTimer: ReturnType<typeof setInterval> | undefined;
 let integrationTimer: ReturnType<typeof setInterval> | undefined;
 let unlistenResize: (() => void) | undefined;
+let unlistenClose: (() => void) | undefined;
 let pollingStatus = false;
 let pollingEvent = false;
 
@@ -377,8 +381,43 @@ function maximizeFromTitlebar(event: MouseEvent) {
   if (event.target === event.currentTarget) void toggleMaximize();
 }
 
-/** 首次加载配置与后台状态，安装引导只在用户打开后读取事件。 */
+/** 每次关闭都让用户选择，重复关闭请求不重置当前弹窗或操作。 */
+function openCloseDialog() {
+  if (!closeDialog.value || closeDialog.value.open) return;
+  closeWindowError.value = "";
+  closeDialog.value.showModal();
+}
+
+/** 取消只收起选择弹窗，避免误操作导致窗口隐藏或联动停止。 */
+function cancelWindowClose() {
+  if (!closingWindow.value) closeDialog.value?.close();
+}
+
+/** 隐藏保留联动和灯效快照，退出交由后台正常清理；失败时保留弹窗供重试。 */
+async function confirmWindowClose(action: "hide" | "exit") {
+  if (closingWindow.value) return;
+  closingWindow.value = true;
+  closeWindowError.value = "";
+  try {
+    if (action === "hide") {
+      await appWindow.hide();
+      closeDialog.value?.close();
+    } else {
+      await invoke("exit_application");
+    }
+  } catch (cause) {
+    closeWindowError.value = String(cause);
+  } finally {
+    closingWindow.value = false;
+  }
+}
+
+/** 优先监听系统关闭请求，再读取配置与状态，让 Alt+F4 使用相同的选择弹窗。 */
 onMounted(async () => {
+  unlistenClose = await appWindow.onCloseRequested((event) => {
+    event.preventDefault();
+    openCloseDialog();
+  });
   loadPreferences();
   maximized.value = await appWindow.isMaximized();
   unlistenResize = await appWindow.onResized(async () => {
@@ -389,11 +428,12 @@ onMounted(async () => {
   integrationTimer = setInterval(refreshCodexEvent, 2000);
 });
 
-/** 离开页面释放轮询定时器，后台联动生命周期不受页面影响。 */
+/** 离开页面释放轮询和窗口监听，后台联动生命周期不受页面影响。 */
 onUnmounted(() => {
   if (statusTimer !== undefined) clearInterval(statusTimer);
   if (integrationTimer !== undefined) clearInterval(integrationTimer);
   unlistenResize?.();
+  unlistenClose?.();
 });
 
 watch(preferences, savePreferences, { deep: true });
@@ -403,7 +443,7 @@ watch(preferences, savePreferences, { deep: true });
   <div class="window-shell" :class="{ mac: isMac, maximized }" :aria-busy="busy">
     <header class="titlebar" @mousedown="dragWindow" @dblclick="maximizeFromTitlebar">
       <div v-if="isMac" class="traffic-lights">
-        <button class="traffic close" title="关闭" aria-label="关闭" @click.stop="appWindow.close()" />
+        <button class="traffic close" title="关闭" aria-label="关闭" @click.stop="openCloseDialog" />
         <button class="traffic minimize" title="最小化" aria-label="最小化" @click.stop="appWindow.minimize()" />
         <button class="traffic maximize" title="最大化" aria-label="最大化" @click.stop="toggleMaximize" />
       </div>
@@ -414,7 +454,7 @@ watch(preferences, savePreferences, { deep: true });
         <button :title="maximized ? '还原' : '最大化'" :aria-label="maximized ? '还原' : '最大化'" @click.stop="toggleMaximize">
           <span :class="maximized ? 'restore-icon' : 'max-icon'" />
         </button>
-        <button class="close-window" title="关闭" aria-label="关闭" @click.stop="appWindow.close()"><span>×</span></button>
+        <button class="close-window" title="关闭" aria-label="关闭" @click.stop="openCloseDialog"><span>×</span></button>
       </div>
     </header>
 
@@ -538,6 +578,23 @@ watch(preferences, savePreferences, { deep: true });
         </section>
       </main>
     </div>
+
+    <dialog ref="closeDialog" class="manual-dialog close-dialog" aria-labelledby="close-title"
+      aria-describedby="close-description" :aria-busy="closingWindow" @cancel="closingWindow && $event.preventDefault()">
+      <div class="section-heading">
+        <h2 id="close-title">关闭 AirPulse</h2>
+        <button class="dialog-close" aria-label="取消关闭" title="取消" :disabled="closingWindow"
+          @click="cancelWindowClose">×</button>
+      </div>
+      <p id="close-description">你希望隐藏窗口继续运行，还是退出程序？</p>
+      <p class="close-note">隐藏到托盘会保留已开启的灯光联动；退出将停止联动，并尝试恢复原灯效。</p>
+      <p v-if="closeWindowError" class="notice error" role="alert">{{ closeWindowError }}</p>
+      <div class="dialog-footer">
+        <button class="link-button" :disabled="closingWindow" autofocus @click="cancelWindowClose">取消</button>
+        <button class="link-button" :disabled="closingWindow" @click="confirmWindowClose('exit')">退出 AirPulse</button>
+        <button class="link-button install-action" :disabled="closingWindow" @click="confirmWindowClose('hide')">隐藏到托盘</button>
+      </div>
+    </dialog>
 
     <dialog ref="integrationDialog" class="manual-dialog integration-dialog" aria-labelledby="integration-title"
       aria-describedby="integration-description" :aria-busy="checkingIntegration || installingIntegration">
@@ -822,6 +879,8 @@ input[type="range"] { width: 100%; accent-color: #2b333c; }
 .dialog-close:hover { background: rgba(38, 47, 59, 0.08); }
 .dialog-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
 .integration-dialog { width: min(600px, calc(100% - 48px)); }
+.close-dialog { width: min(480px, calc(100% - 48px)); }
+.close-dialog > .close-note { color: #586574; }
 .integration-summary { display: flex; gap: 12px; align-items: flex-start; margin: 18px 0; padding: 16px; border-radius: 10px; background: rgba(114, 124, 134, 0.1); }
 .integration-summary.ready { background: rgba(52, 199, 89, 0.1); }
 .integration-dot { width: 9px; height: 9px; margin-top: 5px; flex-shrink: 0; border-radius: 50%; background: #87919c; }
