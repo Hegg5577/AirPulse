@@ -6,6 +6,14 @@
 #>
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path $PSScriptRoot -Parent
+$hookScript = Join-Path $PSScriptRoot 'hooks/receive.ps1'
+$tokens = $null
+$parseErrors = $null
+# 按实际启动环境解析文件，避免编码损坏的 Hook 被静默装入安装包。
+[void][System.Management.Automation.Language.Parser]::ParseFile($hookScript, [ref]$tokens, [ref]$parseErrors)
+if ($parseErrors.Count -gt 0) {
+    throw 'Hook 脚本无法由当前 PowerShell 解析，已停止打包。请检查 UTF-8 BOM 和脚本语法。'
+}
 $receiverPath = Join-Path $repositoryRoot 'src-tauri/target/release/keyphore-hook.exe'
 if (-not (Test-Path -LiteralPath $receiverPath -PathType Leaf)) {
     throw '未找到 release 接收器，请先编译当前源码的 keyphore-hook 二进制。'

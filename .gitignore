@@ -29,3 +29,5 @@ dist-ssr
 
 # Hook 插件二进制由当前源码构建后单独打包
 plugin/bin/
+# Rust 编译产物、缓存及安装包
+/src-tauri/target/

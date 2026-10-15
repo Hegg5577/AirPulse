@@ -1,6 +1,8 @@
-<#
+﻿<#
 .SYNOPSIS
 使用原始 stdin 调用插件内接收器，避免 PowerShell 管道重编码 JSON。
+.NOTES
+保留 UTF-8 BOM，确保 Windows PowerShell 5.1 不按系统代码页误读中文。
 #>
 $ErrorActionPreference = 'Stop'
 $receiverPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'bin/keyphore-hook.exe'
