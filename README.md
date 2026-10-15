@@ -1,137 +1,139 @@
 <p align="center">
-  <img src="src-tauri/icons/128x128@2x.png" alt="AirPulse 图标" width="112" height="112" />
+  <img src="src-tauri/icons/128x128@2x.png" alt="AirPulse icon" width="112" height="112" />
 </p>
 
 <h1 align="center">AirPulse</h1>
 
-<p align="center">让键盘灯光告诉你，Codex 正在做什么。</p>
+<p align="center"><strong>English</strong> | <a href="README.zh-CN.md">简体中文</a></p>
 
-AirPulse 是面向 Windows 的 Codex 状态灯桌面应用。它将多个聊天中仍被跟踪的任务聚合成一个全局状态，通过 USB 控制 NuPhy Air75 V3 的侧灯、主键区或两个区域。你可以自定义状态颜色和亮度，结束接管时恢复原灯效。
+<p align="center">Let your keyboard lighting tell you what Codex is doing.</p>
 
-应用基于 Tauri 2、Vue 3、TypeScript 和 Rust，采用无边框窗口、Windows 风格窗口控制按钮与 Acrylic 毛玻璃材质。
+AirPulse is a Windows desktop app that turns Codex task status into customizable RGB lighting on the NuPhy Air75 V3 keyboard. It combines tracked tasks across multiple chats into one global status and controls the side lights, main key area, or both over USB. You can customize status colors and brightness, then restore the original lighting when control ends.
 
-## 下载与安装
+Built with Tauri 2, Vue 3, TypeScript, and Rust, AirPulse features a frameless window, Windows-style window controls, and Acrylic frosted glass effects.
 
-前往 [GitHub Releases](https://github.com/Hegg5577/AirPulse/releases) 下载 Windows x64 安装包：
+## Download and install
 
-- `AirPulse_0.1.0_x64-setup.exe`：推荐使用的安装程序。
-- `AirPulse_0.1.0_x64_en-US.msi`：MSI 安装包。
-- `SHA256SUMS.txt`：安装包的 SHA256 校验值。
+Download a Windows x64 installer from [GitHub Releases](https://github.com/Hegg5577/AirPulse/releases):
 
-安装后打开 AirPulse，通过顶部的 **Codex 联动** 完成插件安装与连接。
+- `AirPulse_0.1.0_x64-setup.exe`: recommended installer.
+- `AirPulse_0.1.0_x64_en-US.msi`: MSI installer.
+- `SHA256SUMS.txt`: SHA256 checksums for the installers.
 
-## 功能
+After installation, open AirPulse and use **Codex 联动** (Codex integration) at the top of the window to install and connect the plugin. UI labels below include their Chinese text so you can find the corresponding controls in the app.
 
-- **全局状态联动**：聚合多个 Codex 聊天，优先展示失败和权限等待。
-- **自定义状态颜色**：取色器与十六进制输入，亮度支持滑条和整数输入。
-- **三种展示区域**：侧灯、主键区、侧灯 + 主键区；默认侧灯、30% 亮度。
-- **恢复原灯效**：空闲或停止联动时恢复被接管区域，未选择的区域保持原状。
-- **Codex 插件一键安装**：随应用携带组件，检测并复用已有安装，收到真实事件后显示就绪。
-- **高级手动控制**：独立弹窗中读取灯光参数、设置整区静态 RGB、调节亮度、熄灭或恢复。
-- **保留个人配置**：在本地保存颜色、亮度和展示区域。
-- **托盘后台运行**：最小化到任务栏，关闭时可选择隐藏到系统托盘或退出程序。
+## Features
 
-## 全局状态规则
+- **Global task status**: combines multiple Codex chats, prioritizing tool failures and permission requests.
+- **Custom status colors**: color picker and hexadecimal input, with a brightness slider and integer input.
+- **Three lighting zones**: side lights, main key area, or both; defaults to side lights at 30% brightness.
+- **Original lighting restoration**: restores the controlled zones when idle or when integration stops, leaving unselected zones unchanged.
+- **One-click Codex plugin installation**: includes the required components, detects and reuses existing installations, and reports readiness after receiving a real event.
+- **Advanced manual controls**: a separate dialog for reading lighting settings, setting static RGB across a zone, adjusting brightness, turning lights off, and restoring them.
+- **Saved preferences**: stores colors, brightness, and selected zones locally.
+- **System tray support**: minimize to the taskbar, or choose between hiding to the tray and exiting when closing the window.
 
-以下规则按从上到下的优先级判断：
+## Global status rules
 
-| 全局状态 | 默认颜色 | 判定规则 |
+Rules are evaluated in the following priority order:
+
+| Global status | Default color | Rule |
 | --- | --- | --- |
-| 工具失败 | 红色 `#FF3B30` | 任一任务出现可识别的工具失败 |
-| 权限等待 | 红色 `#FF3B30` | 没有工具失败，但至少一个任务等待权限 |
-| 执行中 | 黄色 `#FFD60A` | 没有异常，且至少一个任务正在执行 |
-| 全部完成 | 绿色 `#34C759` | 所有仍被跟踪的任务均已完成 |
-| 空闲 | 原灯效 | 没有活跃任务，恢复接管前的灯光配置 |
+| Tool failure | Red `#FF3B30` | Any task reports a recognizable tool failure |
+| Waiting for permission | Red `#FF3B30` | No tool failure, but at least one task is waiting for permission |
+| Running | Yellow `#FFD60A` | No exceptional condition, and at least one task is running |
+| All completed | Green `#34C759` | All tasks still being tracked have completed |
+| Idle | Original lighting | No active tasks; restore the lighting configuration from before control began |
 
-全部完成后持续显示完成颜色，直到新的任务或生命周期事件改变状态，不会定时熄灭。工具失败只识别工具结果中的明确结构化失败标志，不能覆盖所有工具的错误形式。
+The completion color remains until a new task or lifecycle event changes the status; it does not turn off on a timer. Tool failure detection relies on explicit structured failure flags in tool results and cannot identify every tool's error format.
 
-## 使用前准备
+## Before you start
 
-- Windows 和通过 **USB** 连接的 NuPhy Air75 V3；其他键盘型号及无线连接尚未验证。
-- 唤醒键盘，并关闭其他会同时修改键盘灯光的软件。
-- 使用支持插件与 Hook 审核的 Codex 版本。应用可检测 PATH 中的原生 `codex.exe`，以及 Windows 桌面版随附的 CLI。
+- Use Windows and a NuPhy Air75 V3 connected over **USB**. Other keyboard models and wireless connections have not been verified.
+- Wake the keyboard and close other software that may change its lighting at the same time.
+- Use a Codex version that supports plugins and Hook approval. AirPulse can detect a native `codex.exe` on PATH and the CLI bundled with the Windows desktop app.
 
-### 连接 Codex
+### Connect Codex
 
-1. 打开 AirPulse，点击顶部的 **Codex 联动**。
-2. 点击 **安装 Codex 联动**。已安装时直接复用；未找到 CLI 或安装失败时，弹窗会显示原因。
-3. 首次在 Codex 中审核并信任 Hook。CLI 可使用 `/hooks`；如果插件尚未加载，请重新打开 Codex。
-4. 在 Codex 中发送一条新消息。弹窗收到真实事件后显示 **联动已就绪**。
-5. 回到主页设置颜色、亮度和灯区，再开启联动。
+1. Open AirPulse and click **Codex 联动** (Codex integration) at the top.
+2. Click **安装 Codex 联动** (Install Codex integration). An existing installation is reused. If the CLI cannot be found or installation fails, the dialog explains why.
+3. Review and trust the Hook in Codex on first use. In the CLI, you can use `/hooks`. If the plugin has not loaded, reopen Codex.
+4. Send a new message in Codex. Once the dialog receives a real event, it displays **联动已就绪** (Integration ready).
+5. Return to the main screen, configure colors, brightness, and lighting zones, then enable integration.
 
-安装插件不会自动开启灯光，也不会代替你确认 Hook 信任。定义变化后，Codex 可能要求重新审核。联动就绪表示最近收到真实事件，并不等同于键盘已连接或全部状态已经实机验证。
+Installing the plugin does not automatically enable lighting or approve Hook trust on your behalf. Codex may require another review when Hook definitions change. Integration readiness means a real event was received recently; it does not confirm a keyboard connection or hardware verification of every status.
 
-### 控制与恢复
+### Control and restoration
 
-开启联动后，灯光配置与手动写灯会被锁定。点击 **停止并恢复** 后再修改配置；如果提示恢复失败，请保持原设备和模式并重试。
+While integration is enabled, lighting configuration and manual lighting writes are locked. Click **停止并恢复** (Stop and restore) before changing settings. If restoration fails, keep the original device and mode, then retry.
 
-标题栏的 **最小化** 按钮将窗口缩小到任务栏；点击 **关闭** 按钮或按 `Alt+F4` 会弹出选择窗口。选择 **隐藏到托盘** 会继续已经开启的联动；选择 **退出 AirPulse** 会结束程序，并尽力恢复原灯效；选择 **取消** 或按 `Esc` 则继续使用当前窗口。单击托盘图标、选择托盘菜单中的 **显示窗口**，或再次启动 AirPulse，都可以打开原窗口。右键托盘图标也可以直接选择 **退出 AirPulse**。
+The title bar's **Minimize** button minimizes the window to the taskbar. Clicking **Close** or pressing `Alt+F4` opens a choice dialog. **隐藏到托盘** (Hide to tray) keeps enabled integration running; **退出 AirPulse** (Exit AirPulse) closes the app and attempts to restore the original lighting; **取消** (Cancel) or `Esc` keeps the window open. Click the tray icon, select **显示窗口** (Show window) from its menu, or launch AirPulse again to reopen the existing window. You can also right-click the tray icon and choose **退出 AirPulse** (Exit AirPulse) directly.
 
-恢复点只保存在当前桌面进程内。正常退出会尽力恢复自动联动的原灯效；强制结束进程或断连退出时不能保证恢复。手动修改请使用手动控制弹窗中的恢复按钮。主键区设置可能短暂经过 100% 亮度，当前不支持逐键独立设色。
+Restore points exist only within the current desktop process. A normal exit attempts to restore the lighting used before automatic integration; restoration cannot be guaranteed after force termination or exiting with the keyboard disconnected. For manual changes, use the restore button in the manual control dialog. Main key area updates may briefly pass through 100% brightness. Individual per-key colors are not currently supported.
 
-## 本地开发
+## Local development
 
-需要 Node.js 22.12 或更高的兼容版本、pnpm、Rust stable、Visual Studio C++ 构建工具及 WebView2。Windows 构建环境可参考 [Tauri 环境准备文档](https://v2.tauri.app/start/prerequisites/)。
+You need Node.js 22.12 or a newer compatible version, pnpm, stable Rust, Visual Studio C++ Build Tools, and WebView2. See the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for the Windows build environment.
 
-在仓库根目录执行：
+Run these commands from the repository root:
 
 ```powershell
 pnpm install --frozen-lockfile
 pnpm tauri dev
 ```
 
-只有桌面应用能访问 HID 后台；单独运行 `pnpm dev` 只能预览页面。
+Only the desktop app can access the HID backend. Running `pnpm dev` alone provides a UI preview.
 
-首次从源码开发时，如需使用插件安装功能，先准备当前源码的接收器：
+When developing from source for the first time, prepare the receiver before using plugin installation:
 
 ```powershell
 cargo build --release --bin keyphore-hook --manifest-path src-tauri/Cargo.toml --locked
 powershell -NoProfile -ExecutionPolicy Bypass -File plugin/package.ps1
 ```
 
-修改 Rust、窗口配置、原生材质或后台命令后，需要重新编译并启动桌面进程；只刷新页面无法更新后台。页面提示后台版本过旧时，也按此方式处理。
+After changing Rust code, window configuration, native materials, or backend commands, rebuild and restart the desktop process. Refreshing the page alone does not update the backend. Follow the same procedure if the UI reports an outdated backend.
 
-## 构建安装包
+## Build installers
 
 ```powershell
 pnpm tauri build
 ```
 
-构建前脚本会依次构建前端、编译 release Hook 接收器并准备插件文件，再由 Tauri 构建桌面程序与安装包。任一步失败即停止打包。
+The preparation script builds the frontend, compiles the release Hook receiver, and prepares the plugin files before Tauri builds the desktop app and installers. Packaging stops if any step fails.
 
-安装包输出到 `src-tauri/target/release/bundle/`。插件资源随包携带，新安装时复制到当前用户的应用数据目录，不依赖源码位置。仓库不提交 `node_modules`、`dist`、Rust `target` 或插件二进制。
+Installers are written to `src-tauri/target/release/bundle/`. Plugin resources are bundled with the app and copied to the current user's application data directory on a fresh installation, without depending on the source checkout. The repository does not track `node_modules`, `dist`, Rust `target`, or plugin binaries.
 
-应用图标统一保存在 `src-tauri/icons/`，页面与标题栏图标为 `public/airpulse.png`；桌面图标和 README 使用同一套 AirPulse 资源。
+Application icons are stored in `src-tauri/icons/`; the page and title bar use `public/airpulse.png`. Desktop icons and the README use the same AirPulse assets.
 
-## 项目结构
+## Project structure
 
 ```text
-src/                       Vue 界面与联动配置
-public/                    页面静态资源
-src-tauri/src/             HID 协议、状态聚合、灯光控制及插件安装
-src-tauri/src/bin/         Hook 接收器和硬件诊断程序
-src-tauri/tests/           协议、状态、接收器与灯光测试
-src-tauri/icons/           应用及安装包图标
-plugin/                    Codex 插件清单、Hook 定义与转发脚本
-.agents/plugins/           本地插件源清单
-scripts/                   发布构建准备脚本
-docs/                      集成说明、设计记录与硬件测试记录
+src/                       Vue UI and integration preferences
+public/                    Static frontend assets
+src-tauri/src/             HID protocol, status aggregation, lighting, and plugin installation
+src-tauri/src/bin/         Hook receiver and hardware diagnostics
+src-tauri/tests/           Protocol, status, receiver, and lighting tests
+src-tauri/icons/           Application and installer icons
+plugin/                    Codex plugin manifest, Hook definitions, and forwarding scripts
+.agents/plugins/           Local plugin source manifest
+scripts/                   Release build preparation scripts
+docs/                      Integration guides, design notes, and hardware test records
 ```
 
-## 数据与兼容性
+## Data and compatibility
 
-Hook 只保存聚合状态所需的标识和阶段，不保存提示词、聊天正文、工具参数或工具结果正文，也不直接访问键盘。
+The Hook stores only the identifiers and phases needed to aggregate status. It does not store prompts, chat content, tool arguments, or tool result bodies, and it does not access the keyboard directly.
 
-AirPulse 由本项目原来的 Keyphore Windows 开发版本更名而来。为继续使用已有安装和配置，以下内部标识保持兼容：
+AirPulse was renamed from this project's earlier Keyphore Windows development version. The following internal identifiers remain unchanged to preserve compatibility with existing installations and settings:
 
-| 项目 | 兼容标识 |
+| Item | Compatibility identifier |
 | --- | --- |
-| 应用标识 | `com.barrywu.keyphore.windows` |
-| Codex 插件 | `keyphore-windows@keyphore-local` |
-| Hook 接收器 | `keyphore-hook.exe` |
-| 状态文件 | `%LOCALAPPDATA%\Keyphore\status.json` |
-| 页面配置键 | `keyphore.status-light.preferences.v1` |
+| Application identifier | `com.barrywu.keyphore.windows` |
+| Codex plugin | `keyphore-windows@keyphore-local` |
+| Hook receiver | `keyphore-hook.exe` |
+| Status file | `%LOCALAPPDATA%\Keyphore\status.json` |
+| UI preferences key | `keyphore.status-light.preferences.v1` |
 
-因此在 Codex 插件列表或本地数据路径中仍可能看到旧名称。已有开发目录安装只复用，不会自动迁移或升级；请保留其插件源目录。更名不代表支持新的键盘型号或 macOS，界面的平台样式也不等同于平台已完成适配。
+You may therefore still see the old name in the Codex plugin list or local data paths. Existing installations linked to a development directory are reused without automatic migration or upgrades; keep their plugin source directory available. The rename does not add support for other keyboard models or macOS, and platform-specific UI styling does not imply platform support.
 
-详细记录见 [Codex 联动说明](docs/codex-status-integration.md) 和 [灯光硬件测试记录](docs/lighting-hardware-tests.md)。`docs/superpowers/` 保留原始设计与实施历史，其中的旧名称和旧计划以当前 README 为准。
+See the [Codex integration guide](docs/codex-status-integration.md) and [lighting hardware test records](docs/lighting-hardware-tests.md) for details; these documents are in Chinese. `docs/superpowers/` preserves the original design and implementation history. Where older names or plans differ, follow the current README.
